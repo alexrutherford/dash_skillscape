@@ -18,6 +18,10 @@ cols=['title','wage','employees','automation','cognitive','code']
 df=df[df['wage']>0]
 # Do some filtering
 
+df['cognitive']=df['cognitive'].round(2)
+
+dff=df.copy()
+
 #     dcc.RangeSlider(
 #     min=0,
 #     max=30,
@@ -26,21 +30,26 @@ df=df[df['wage']>0]
 # ),
 
 ######################
-def generate_table(dataframe, max_rows=100):
+def generate_table(dataframe, max_rows=9999999):
     return dt.DataTable(
     rows=df.to_dict('records'), # initialise the rows
-    #row_selectable=True,
+    row_selectable=True,
     #filterable=True,
     sortable=True,
     selected_row_indices=[],
     id='table',
-    max_rows_in_viewport=max_rows
+    max_rows_in_viewport=max_rows,
+    column_widths=10
+
 )
+
+#['id', 'editable', 'filterable', 'sortable', 'resizable', 'column_widths', 'columns', 'row_selectable', 'selected_row_indices',
+# 'enable_drag_and_drop', 'header_row_height', 'min_height', 'min_width', 'max_rows_in_viewport', 'row_height', 'row_scroll_timeout',
+# 'tab_index', 'filters', 'rows', 'row_update', 'sortColumn', 'sortDirection']
 
     return html.Table(
         # Header
         [html.Tr([html.Th(col.capitalize()) for col in cols])] +
-
         [html.Tr(['{:d}'.format(dataframe.iloc[i]['wage']),dataframe.iloc[i]['wage']]) for i in range(min(len(dataframe), max_rows))]
 
         # [html.Tr([
@@ -59,11 +68,13 @@ app.layout = html.Div(children=[
     # html.Div(children='''
     #     Dash: A web application framework for Python.
     # '''),
-
+    html.Div([
     dcc.Graph(
         id='wage-hist',
         selectedData={},
         hoverData={},
+        className="six columns",
+        #gap=0.5,
         figure={
             'data': [
                 {'x':  df['wage'], 'type': 'histogram'},
@@ -73,7 +84,21 @@ app.layout = html.Div(children=[
             }
         }
     ),
-
+    dcc.Graph(
+        id='employee-hist',
+        selectedData={},
+        hoverData={},
+        className="six columns",
+        figure={
+            'data': [
+                {'x':  df['employees'], 'type': 'histogram'},
+            ],
+            'layout': {
+                'title': 'Employee Distribution'
+            }
+        }
+    ),
+    ],className='row'),
 
     generate_table(df)
     #dt.DataTable(id='table')
@@ -81,6 +106,77 @@ app.layout = html.Div(children=[
 components = ['id', 'clickData', 'hoverData', 'clear_on_unhover', \
 'selectedData', 'relayoutData', 'figure', 'style', 'className', 'animate', \
 'animation_options', 'config']
+########################
+@app.callback(
+    Output('wage-hist', 'figure'),
+    [Input('table', 'rows'),
+     Input('table', 'selected_row_indices')])
+def update_figure(rows, selected):
+    if len(selected)>0:
+        dff = pd.DataFrame(rows)
+        print('Updating')
+        print(dff.iloc[selected])
+        selectedWage=dff.iloc[selected]['wage'].values[0]
+        #print(selectedWage.values[0])
+
+        figure={
+            'data': [
+                {'x':  df['wage'], 'type': 'histogram'},
+            ],
+            'layout' : {
+                'title': 'Wage Distribution',
+                'shapes' : [{'type' : 'line', 'x0':selectedWage,'x1':selectedWage,'y0':0,'y1':100,
+                'line':{'width':4,'color':'rgb(55, 128, 191)'}}]
+            }
+        }
+        return figure
+# @app.callback(
+#     Output('wage-hist','figure'),
+#     [Input('table', 'selected_row_indices'),Input('wage-hist','config')])
+# def markJob(selected,figure):
+#     #print(selected)
+#     #print(dff.iloc[selected])
+#     print(figure)
+#     # return dcc.Graph(
+#     #     id='wage-hist',
+#     #     selectedData={},
+#     #     hoverData={},
+#     #     className="six columns",
+#     #     #gap=0.5,
+#     #     figure={
+#     #         'data': [
+#     #             {'x':  df['wage'], 'type': 'histogram'},
+#     #         ],
+#     #         'layout': {
+#     #             'title': 'Wage Distribution',
+#     #             'shapes':{
+#     #                     'type': 'line',
+#     #                     'x0': 1,
+#     #                     'y0': 0,
+#     #                     'x1': 1,
+#     #                     'y1': 2,
+#     #                     'line': {
+#     #                         'color': 'rgb(55, 128, 191)',
+#     #                         'width': 3,
+#     #                     },
+#     #         }
+#     #     }
+#     #     }
+#     #)
+#
+#     # append 'shapes': [
+#     #     # Line Vertical
+#     #     {
+#     #         'type': 'line',
+#     #         'x0': 1,
+#     #         'y0': 0,
+#     #         'x1': 1,
+#     #         'y1': 2,
+#     #         'line': {
+#     #             'color': 'rgb(55, 128, 191)',
+#     #             'width': 3,
+#     #         },
+#     #     },
 ########################
 @app.callback(
     Output('table', 'rows'),
