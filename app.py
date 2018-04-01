@@ -31,12 +31,14 @@ dff=df.copy()
 
 ######################
 def generate_table(dataframe, max_rows=9999999):
+    print('Generating')
+
     return dt.DataTable(
     rows=df.to_dict('records'), # initialise the rows
     row_selectable=True,
     #filterable=True,
     sortable=True,
-    selected_row_indices=[],
+    #selected_row_indices=[],
     id='table',
     max_rows_in_viewport=max_rows,
     column_widths=10
@@ -78,10 +80,11 @@ app.layout = html.Div(children=[
         figure={
             'data': [
                 {'x':  df['wage'], 'type': 'histogram'},
-            ],
-            'layout': {
-                'title': 'Wage Distribution'
-            }
+            ]
+            #,
+            #'layout': {
+            #    'title': 'Wage Distribution'
+            #}
         }
     ),
     dcc.Graph(
@@ -99,6 +102,38 @@ app.layout = html.Div(children=[
         }
     ),
     ],className='row'),
+    html.Div([
+    dcc.Graph(
+        id='cognitive-hist',
+        selectedData={},
+        hoverData={},
+        className="six columns",
+        #gap=0.5,
+        figure={
+            'data': [
+                {'x':  df['cognitive'], 'type': 'histogram'},
+            ]
+            #,
+            #'layout': {
+            #    'title': 'Wage Distribution'
+            #}
+        }
+    ),
+    dcc.Graph(
+        id='auto-hist',
+        selectedData={},
+        hoverData={},
+        className="six columns",
+        figure={
+            'data': [
+                {'x':  df['automation'], 'type': 'histogram'},
+            ],
+            'layout': {
+                'title': 'Automation Distribution'
+            }
+        }
+    ),
+    ],className='row'),
 
     generate_table(df)
     #dt.DataTable(id='table')
@@ -107,81 +142,65 @@ components = ['id', 'clickData', 'hoverData', 'clear_on_unhover', \
 'selectedData', 'relayoutData', 'figure', 'style', 'className', 'animate', \
 'animation_options', 'config']
 ########################
+def makeLines(x,y):
+    return {'type' : 'line', 'x0':x,'x1':x,'y0':0,'y1':100,
+    'line':{'dash':'dot','width':2,'color':'rgb(128,128,128)'}}
+
+########################
 @app.callback(
     Output('wage-hist', 'figure'),
     [Input('table', 'rows'),
-     Input('table', 'selected_row_indices')])
-def update_figure(rows, selected):
-    if len(selected)>0:
-        dff = pd.DataFrame(rows)
-        print('Updating')
-        print(dff.iloc[selected])
-        selectedWage=dff.iloc[selected]['wage'].values[0]
-        #print(selectedWage.values[0])
+     Input('table', 'selected_row_indices')],
+     [State('wage-hist', 'figure')])
+def update_figure(rows, selected,state):
+    print('Selection?')
+    if selected:
+        if len(selected)>0:
+            dff = pd.DataFrame(rows)
+            print('Updating')
+            print(dff.iloc[selected])
+            selectedWage=dff.iloc[selected]['wage'].values[0]
+            #print(selectedWage.values[0])
 
+            figure={
+                'data': [
+                    {'x':  df['wage'], 'type': 'histogram'},
+                ],
+                'layout' : {
+                    'title': 'Wage Distribution',
+                    'shapes' : []
+                }
+            }
+            figure['layout']['shapes']=[makeLines(x,100) for x in dff.iloc[selected]['wage'].values]
+
+            return figure
+        else:
+            figure={
+                'data': [
+                    {'x':  df['wage'], 'type': 'histogram'},
+                ],
+                'layout' : {
+                    'title': 'Wage Distribution'
+                }
+            }
+            return figure
+    else:
         figure={
             'data': [
                 {'x':  df['wage'], 'type': 'histogram'},
             ],
             'layout' : {
-                'title': 'Wage Distribution',
-                'shapes' : [{'type' : 'line', 'x0':selectedWage,'x1':selectedWage,'y0':0,'y1':100,
-                'line':{'width':4,'color':'rgb(55, 128, 191)'}}]
+                'title': 'Wage Distribution'
             }
         }
         return figure
-# @app.callback(
-#     Output('wage-hist','figure'),
-#     [Input('table', 'selected_row_indices'),Input('wage-hist','config')])
-# def markJob(selected,figure):
-#     #print(selected)
-#     #print(dff.iloc[selected])
-#     print(figure)
-#     # return dcc.Graph(
-#     #     id='wage-hist',
-#     #     selectedData={},
-#     #     hoverData={},
-#     #     className="six columns",
-#     #     #gap=0.5,
-#     #     figure={
-#     #         'data': [
-#     #             {'x':  df['wage'], 'type': 'histogram'},
-#     #         ],
-#     #         'layout': {
-#     #             'title': 'Wage Distribution',
-#     #             'shapes':{
-#     #                     'type': 'line',
-#     #                     'x0': 1,
-#     #                     'y0': 0,
-#     #                     'x1': 1,
-#     #                     'y1': 2,
-#     #                     'line': {
-#     #                         'color': 'rgb(55, 128, 191)',
-#     #                         'width': 3,
-#     #                     },
-#     #         }
-#     #     }
-#     #     }
-#     #)
-#
-#     # append 'shapes': [
-#     #     # Line Vertical
-#     #     {
-#     #         'type': 'line',
-#     #         'x0': 1,
-#     #         'y0': 0,
-#     #         'x1': 1,
-#     #         'y1': 2,
-#     #         'line': {
-#     #             'color': 'rgb(55, 128, 191)',
-#     #             'width': 3,
-#     #         },
-#     #     },
 ########################
 @app.callback(
     Output('table', 'rows'),
     [Input('wage-hist','relayoutData')])
 def test(relayData):
+    print('Relay?')
+
     if relayData:
         print('*** New range')
         if relayData.get('xaxis.range[0]') and relayData.get('xaxis.range[0]'):
